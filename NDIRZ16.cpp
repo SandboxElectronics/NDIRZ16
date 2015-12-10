@@ -1,7 +1,7 @@
-/* 
+/*
 Description:
 This is a example code for Sandbox Electronics' MH-Z16 NDIR CO2 sensor module.
-You can get one of those products on 
+You can get one of those products on
 http://sandboxelectronics.com
 
 Version:
@@ -16,103 +16,121 @@ Tiequan Shao          info@sandboxelectronics.com
 Lisence:
 CC BY-NC-SA 3.0
 
-Please keep the above information when you use this code in your project. 
+Please keep the above information when you use this code in your project.
 */
 
 #include <NDIRZ16.h>
 
-//#define _NDIR_DEBUG_ON_
+uint8_t NDIRZ16::cmd_measure[9] = {0xFF,0x01,0x86,0x00,0x00,0x00,0x00,0x00,0x79};
 
-NDIRZ16::NDIRZ16(Stream *myserial)
+NDIRZ16::NDIRZ16(Stream *stream)
 {
-	    uint8_t lmeasure[9] =  {0xFF,0x01,0x86,0x00,0x00,0x00,0x00,0x00,0x79};
-        uint8_t lcalibrate[9] = {0xFF,0x87,0x87,0x00,0x00,0x00,0x00,0x00,0xF2};
-		uint8_t i;
-	_myserial = myserial;
-	for (i=0;i<9;i++) {
-		measure[i]=lmeasure[i];
-    }
-	for (i=0;i<9;i++) {
-		calibrate[i]=lcalibrate[i];
-    }
-
+    serial = stream;
 }
-
-
-
-
-
-uint16_t NDIRZ16::getppm(void)
+/*
+uint16_t NDIRZ16::getppm()
 {
     uint16_t co2ppm;
 	uint8_t temperature;
-	sendcommand(measure);
-    getresult(&co2ppm,&temperature);
-	
+    measure(&co2ppm, &temperature);
 	return co2ppm;
 }
 
-uint8_t NDIRZ16::gettemperature(void)
+uint8_t NDIRZ16::gettemperature()
 {
     uint16_t co2ppm;
 	uint8_t temperature;
-	sendcommand(measure);
-    getresult(&co2ppm,&temperature);
-	
+    measure(&co2ppm, &temperature);
 	return temperature;
 }
+*/
+void NDIRZ16::sendcommand (uint8_t *pcommand)
+{
+    uint8_t i;
 
-void NDIRZ16::sendcommand(uint8_t *pcommand)
-{
-    uint8_t i;
- 
     for (i=0;i<9;i++) {
-        _myserial->write(pcommand[i]);
-        
+        serial->write(pcommand[i]);
     }
-    
 }
-uint8_t NDIRZ16::getresult(uint16_t *pppm, uint8_t *ptemp)
+
+uint8_t NDIRZ16::measure ()
+{
+    uint8_t i = 0;
+    uint8_t buf[9];
+    uint32_t start = millis();
+    uint8_t av;
+
+    sendcommand(cmd_measure);
+
+    while (i < 9) {
+//        Serial.println(i);
+        if (av = serial->available()) {
+//            Serial.print("available==");
+//            Serial.println(av);
+            buf[i] = serial->read();
+
+            if (i == 0 && buf[0] != 0xFF) {
+                continue;
+            } else {
+                i++;
+            }
+        }
+
+        if (millis() - start > 1000) {
+            return false;
+        }
+
+        //delay(10);
+    }
+
+//    for (i=0; i<8; i++) {
+//        Serial.print(buf[i], HEX);
+//        Serial.print(" ");
+//    }
+//
+//    Serial.println(buf[8], HEX);
+
+    if (buf[1] == 0x86) {
+        if (checksum_valid(buf)) {
+            ppm         = (uint16_t)buf[2] << 8 | buf[3];
+            temperature = buf[4] - 40;
+            return true;
+        } else {
+            return false;
+        }
+    } else {
+        return false;
+    }
+}
+
+uint8_t NDIRZ16::checksum_valid (uint8_t *pbuf)
 {
     uint8_t i;
-    uint8_t buffer[10];
-    
-    _myserial->setTimeout(100);
-    _myserial->readBytes((char*)buffer,9);
-#ifdef _NDIR_DEBUG_ON_    
-    Serial.println("Received data: ");
-    
-    for (i=0;i<9;i++) {
-        Serial.print(buffer[i],HEX);
-        Serial.print(" ");
-        
+    uint8_t checksum = 0;
+
+    for (i=0; i<9; i++) {
+        checksum += pbuf[i];
     }
-   
-    Serial.println(" ");
-#endif     
-    if (buffer[0] != 0xff) {
-#ifdef _NDIR_DEBUG_ON_   
-      Serial.println("error 2");
-      Serial.println(i);
-      Serial.println(buffer[0]);
-#endif 
-      return 0;
+
+    if (checksum == 0xFF) {
+        return true;
+    } else {
+        return false;
     }
-    
-    if (buffer[1] != 0x86) {
-#ifdef _NDIR_DEBUG_ON_  
-      Serial.println("error 3");
-      Serial.println(i);
-      Serial.println(buffer[1]);
-#endif 
-      return 0;
+}
+
+int32_t NDIRZ16::getppm() {
+    if (measure()) {
+        return ppm;
+    } else {
+        return -1;
     }
-   
-    *pppm = buffer[3];
-    *pppm |= ((int16_t)buffer[2] << 8);
-  
-    *ptemp = buffer[4] -40;  
-    
-    
-    return 1;
+}
+
+int8_t NDIRZ16::gettemperature() {
+    if (measure()) {
+        return temperature;
+    } else {
+        return -1;
+    }
 }
