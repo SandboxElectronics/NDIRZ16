@@ -1,7 +1,7 @@
-/* 
+/*
 Description:
 This is a example code for Sandbox Electronics' MH-Z16 NDIR CO2 sensor module.
-You can get one of those products on 
+You can get one of those products on
 http://sandboxelectronics.com
 
 Version:
@@ -16,7 +16,7 @@ Tiequan Shao          info@sandboxelectronics.com
 Lisence:
 CC BY-NC-SA 3.0
 
-Please keep the above information when you use this code in your project. 
+Please keep the above information when you use this code in your project.
 */
 
 #ifndef _NDIRZ16_H_
@@ -30,17 +30,20 @@ Please keep the above information when you use this code in your project.
 
 class NDIRZ16 {
     public:
-		NDIRZ16(Stream *myserial);
+		NDIRZ16(Stream *stream);
 
-        uint16_t getppm(void);
-        uint8_t gettemperature(void);
+        uint32_t ppm;
+        uint8_t  temperature;
 
-		
+        uint8_t  measure();
+        int32_t  getppm();
+        int8_t   gettemperature();
+
     private:
-		Stream *_myserial;
-        void sendcommand(uint8_t *pcommand);
-        uint8_t getresult(uint16_t *pppm, uint8_t *ptemp);
-	    uint8_t measure[9]; //=  {0xFF,0x01,0x86,0x00,0x00,0x00,0x00,0x00,0x79};
-        uint8_t calibrate[9];// = {0xFF,0x87,0x87,0x00,0x00,0x00,0x00,0x00,0xF2};
+	    static uint8_t cmd_measure[9];
+		Stream *serial;
+
+        void    sendcommand    (uint8_t *pcommand);
+        uint8_t checksum_valid (uint8_t *pbuf);
 };
-#endif		
+#endif
