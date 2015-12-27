@@ -4,7 +4,7 @@
 //Arduino UNO Pin D2 (Software Serial Rx) <===> Adaptor's Green  Wire (Tx)
 //Arduino UNO Pin D3 (Software Serial Tx) <===> Adaptor's Yellow Wire (Rx)
 SoftwareSerial mySerial(2,3);
-NDIRZ16 myco2sensor = NDIRZ16(&mySerial);
+NDIRZ16 mySensor = NDIRZ16(&mySerial);
 
 void setup() 
 {
